@@ -34,6 +34,10 @@
 # retrieved from git://codeaurora.org/quic/b2g/build.git 
 # There is a small patch applied that changes how we determine whether we
 # apply the 'gb' or 'ics' patch series
+
+export B2G_DIR=$PWD
+. $B2G_DIR/load-config.sh
+
 if [[ ! ( -f build/envsetup.sh ) ]]; then
    echo $0: Error: CWD does not look like the root of an Android tree. > /dev/stderr
    exit 1
@@ -49,14 +53,14 @@ fi
 case $(sed -e '/^.*[^#]PLATFORM_VERSION .*=/!d  ; s/.*PLATFORM_VERSION.*=[^0-9]*\([0-9]\.[0-9]\).*/\1/' build/core/version_defaults.mk) in
     # The first asterisk is probably bad
     4.1|4.2)
-        echo ${MANIFEST_ID} jb all
+        echo ${MANIFEST_ID} ${MANIFEST_ID}-${DEVICE} jb jb-${DEVICE} all all-${DEVICE}
         ;;
     4.0)
-        echo ${MANIFEST_ID} ics all
+        echo ${MANIFEST_ID} ${MANIFEST_ID}-${DEVICE} ics ics-${DEVICE} all all-${DEVICE}
         ;;
     2.3)
-        echo ${MANIFEST_ID} gb all
+        echo ${MANIFEST_ID} ${MANIFEST_ID}-${DEVICE} gb gb-${DEVICE} all all-${DEVICE}
         ;;
     *)
-        echo ${MANIFEST_ID} all
+        echo ${MANIFEST_ID} ${MANIFEST_ID}-${DEVICE} all all-${DEVICE}
 esac
