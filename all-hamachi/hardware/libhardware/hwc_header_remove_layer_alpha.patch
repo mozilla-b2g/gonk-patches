@@ -1,0 +1,14 @@
+diff --git a/include/hardware/hwcomposer.h b/include/hardware/hwcomposer.h
+index 1b77733..d53269f 100644
+--- a/include/hardware/hwcomposer.h
++++ b/include/hardware/hwcomposer.h
+@@ -169,9 +169,6 @@ typedef struct hwc_layer {
+     /* blending to apply during composition */
+     int32_t blending;
+ 
+-    /* alpha value of the layer */
+-    int32_t alpha;
+-
+     /* area of the source to consider, the origin is the top-left corner of
+      * the buffer */
+     hwc_rect_t sourceCrop;

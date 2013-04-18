@@ -1,0 +1,18 @@
+diff --git a/libcopybit/copybit.cpp b/libcopybit/copybit.cpp
+index 5407b6d..4563b47 100644
+--- a/libcopybit/copybit.cpp
++++ b/libcopybit/copybit.cpp
+@@ -444,6 +444,13 @@ static int stretch_copybit(
+             set_infos(ctx, req, flags);
+             set_image(&req->dst, dst);
+             set_image(&req->src, src);
++            if (req->src.format == MDP_RGBA_8888) {
++                req->src.format = MDP_BGRA_8888;
++            }
++            else if (req->src.format == MDP_RGBX_8888) {
++                req->src.format = MDP_XRGB_8888;
++            }
++
+             set_rects(ctx, req, dst_rect, src_rect, &clip, src->horiz_padding, src->vert_padding);
+ 
+             if (req->src_rect.w<=0 || req->src_rect.h<=0)

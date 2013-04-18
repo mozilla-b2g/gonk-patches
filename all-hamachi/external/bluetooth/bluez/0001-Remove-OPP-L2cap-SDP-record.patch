@@ -1,0 +1,51 @@
+From 84c240f62c65ecf14535b8c76d3c699d6a2b53a0 Mon Sep 17 00:00:00 2001
+From: Greg Grisco <ggrisco@codeaurora.org>
+Date: Fri, 1 Mar 2013 08:33:01 -0800
+Subject: [PATCH] Remove OPP L2cap SDP record
+
+FFOS does not support OBEX over L2cap so the SDP record should not
+advertise this capability.
+
+CRs-fixed: 456252
+
+Change-Id: I3c6f117210e150c2bb1fe57c64736f97cd6572ba
+---
+ src/adapter.c |    8 +-------
+ 1 files changed, 1 insertions(+), 7 deletions(-)
+
+diff --git a/src/adapter.c b/src/adapter.c
+index 1eecd45..8d5e42e 100644
+--- a/src/adapter.c
++++ b/src/adapter.c
+@@ -2860,8 +2860,6 @@ static int add_opush_record(struct btd_adapter *adapter)
+ 	sdp_record_t *record;
+ 	uint8_t u8 = 12;
+ 	sdp_data_t *channel;
+-	uint16_t psm = 0x1487;
+-	sdp_data_t *goepsm = NULL;
+ #ifdef ANDROID
+ 	uint8_t formats[] = { 0x01, 0x02, 0xff };
+ #else
+@@ -2885,7 +2883,7 @@ static int add_opush_record(struct btd_adapter *adapter)
+ 	sdp_set_service_classes(record, svclass_id);
+ 
+ 	sdp_uuid16_create(&profile[0].uuid, OBEX_OBJPUSH_PROFILE_ID);
+-	profile[0].version = 0x0102;
++	profile[0].version = 0x0100;
+ 	pfseq = sdp_list_append(0, profile);
+ 	sdp_set_profile_descs(record, pfseq);
+ 
+@@ -2902,10 +2900,6 @@ static int add_opush_record(struct btd_adapter *adapter)
+ 	sdp_uuid16_create(&obex_uuid, OBEX_UUID);
+ 	proto[2] = sdp_list_append(0, &obex_uuid);
+ 	apseq = sdp_list_append(apseq, proto[2]);
+-	goepsm = sdp_data_alloc(SDP_UINT16, &psm);
+-	if(goepsm){
+-		sdp_attr_add(record, SDP_ATTR_GOEP_L2CAP_PSM, goepsm);
+-        }
+ 
+ 	aproto = sdp_list_append(0, apseq);
+ 	sdp_set_access_protos(record, aproto);
+-- 
+1.7.8.3
+

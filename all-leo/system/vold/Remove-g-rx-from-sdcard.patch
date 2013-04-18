@@ -1,0 +1,16 @@
+diff --git a/Volume.cpp b/Volume.cpp
+index ceca2d5..cdbf143 100644
+--- a/Volume.cpp
++++ b/Volume.cpp
+@@ -422,7 +422,7 @@ int Volume::mountVol() {
+             gid = AID_MEDIA_RW;
+         }
+         if (Fat::doMount(devicePath, "/mnt/secure/staging", false, false, false,
+-                AID_SYSTEM, gid, 0702, true)) {
++                AID_SYSTEM, gid, 0707, true)) {
+             SLOGE("%s failed to mount via VFAT (%s)\n", devicePath, strerror(errno));
+             continue;
+         }
+-- 
+1.7.10.2 (Apple Git-33)
+

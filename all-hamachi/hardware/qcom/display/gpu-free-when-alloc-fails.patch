@@ -1,0 +1,13 @@
+diff --git a/libgralloc/gpu.cpp b/libgralloc/gpu.cpp
+index bd4c248..399520d 100755
+--- a/libgralloc/gpu.cpp
++++ b/libgralloc/gpu.cpp
+@@ -253,7 +253,7 @@ int gpu_context_t::alloc_impl(int w, int h, int format, int usage,
+     err = genlock_create_lock((native_handle_t*)(*pHandle));
+     if (err) {
+         LOGE("%s: genlock_create_lock failed", __FUNCTION__);
+-        free_impl(reinterpret_cast<private_handle_t*>(pHandle));
++        free_impl(reinterpret_cast<const private_handle_t*>(*pHandle));
+         return err;
+     }
+     *pStride = alignedw;

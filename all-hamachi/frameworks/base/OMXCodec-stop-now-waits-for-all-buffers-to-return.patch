@@ -1,0 +1,61 @@
+diff --git a/include/media/stagefright/OMXCodec.h b/include/media/stagefright/OMXCodec.h
+index 845256c..4dfc84f 100644
+--- a/include/media/stagefright/OMXCodec.h
++++ b/include/media/stagefright/OMXCodec.h
+@@ -211,10 +211,12 @@ private:
+     bool mOutputPortSettingsChangedPending;
+     bool mThumbnailMode;
+ 
++    uint32_t mNumClientBuffers;
+     MediaBuffer *mLeftOverBuffer;
+ 
+     Mutex mLock;
+     Condition mAsyncCompletion;
++    Condition mBufferCompletion;
+ 
+     bool mPaused;
+ 
+diff --git a/media/libstagefright/OMXCodec.cpp b/media/libstagefright/OMXCodec.cpp
+index fb7ae4f..b010ef8 100755
+--- a/media/libstagefright/OMXCodec.cpp
++++ b/media/libstagefright/OMXCodec.cpp
+@@ -2189,6 +2189,7 @@ OMXCodec::OMXCodec(
+       mTargetTimeUs(-1),
+       mOutputPortSettingsChangedPending(false),
+       mThumbnailMode(false),
++      mNumClientBuffers(0),
+       mLeftOverBuffer(NULL),
+       mPaused(false),
+       mNativeWindow(
+@@ -5071,6 +5072,10 @@ status_t OMXCodec::stop() {
+         mAsyncCompletion.wait(mLock);
+     }
+ 
++    while (mNumClientBuffers) {
++        mBufferCompletion.wait(mLock);
++    }
++
+     bool isError = false;
+     switch (mState) {
+         case LOADED:
+@@ -5411,6 +5416,7 @@ status_t OMXCodec::read(
+ 
+     BufferInfo *info = &mPortBuffers[kPortIndexOutput].editItemAt(index);
+     CHECK_EQ((int)info->mStatus, (int)OWNED_BY_US);
++    mNumClientBuffers++;
+     info->mStatus = OWNED_BY_CLIENT;
+ 
+     info->mMediaBuffer->add_ref();
+@@ -5430,7 +5436,9 @@ void OMXCodec::signalBufferReturned(MediaBuffer *buffer) {
+             CHECK_EQ((int)mPortStatus[kPortIndexOutput], (int)ENABLED);
+             CHECK_EQ((int)info->mStatus, (int)OWNED_BY_CLIENT);
+ 
++            mNumClientBuffers--;
+             info->mStatus = OWNED_BY_US;
++            mBufferCompletion.signal();
+ 
+             if (buffer->graphicBuffer() == 0) {
+                 //skip FTB if port settings handling is pending
+-- 
+1.7.10.2 (Apple Git-33)
+

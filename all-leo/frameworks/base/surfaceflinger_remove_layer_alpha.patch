@@ -1,0 +1,13 @@
+diff --git a/services/surfaceflinger/Layer.cpp b/services/surfaceflinger/Layer.cpp
+index 162c241..94630c2 100644
+--- a/services/surfaceflinger/Layer.cpp
++++ b/services/surfaceflinger/Layer.cpp
+@@ -200,8 +200,6 @@ void Layer::setGeometry(hwc_layer_t* hwcl)
+         }
+     }
+ 
+-    hwcl->alpha = s.alpha;
+-
+     /*
+      * Transformations are applied in this order:
+      * 1) buffer orientation/flip/mirror
