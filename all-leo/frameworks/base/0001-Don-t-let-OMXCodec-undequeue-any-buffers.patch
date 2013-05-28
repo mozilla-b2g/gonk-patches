@@ -1,0 +1,29 @@
+From fc86ffdf0ebf519fc9847a686e151719e55f7487 Mon Sep 17 00:00:00 2001
+From: Diego Wilson <dwilson@codeaurora.org>
+Date: Fri, 10 May 2013 10:26:27 -0700
+Subject: [PATCH] Don't let OMXCodec undequeue any buffers
+
+The gecko multimedia framework can not use any
+undequeued buffers that the native window holds.
+
+Change-Id: I7941f66976fca2493389e1dbe783dcec35c2ea73
+---
+ media/libstagefright/OMXCodec.cpp |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/media/libstagefright/OMXCodec.cpp b/media/libstagefright/OMXCodec.cpp
+index 65f911f..e876151 100755
+--- a/media/libstagefright/OMXCodec.cpp
++++ b/media/libstagefright/OMXCodec.cpp
+@@ -2812,7 +2812,7 @@ status_t OMXCodec::allocateOutputBuffersFromNativeWindow() {
+         cancelEnd = mPortBuffers[kPortIndexOutput].size();
+     } else {
+         // Return the last two buffers to the native window.
+-        cancelStart = def.nBufferCountActual - minUndequeuedBufs;
++        cancelStart = def.nBufferCountActual;
+         cancelEnd = def.nBufferCountActual;
+     }
+ 
+-- 
+1.7.8.3
+
