@@ -1,0 +1,28 @@
+From 55d04304bf1f6bb71cf350399effe26fa7608572 Mon Sep 17 00:00:00 2001
+From: Diego Wilson <dwilson@codeaurora.org>
+Date: Tue, 28 May 2013 15:08:59 -0700
+Subject: [PATCH] Bug 871018 - handle OMX_StatePause state in
+ OMXNodeInstance::freeNote()
+
+Change-Id: Ic8d3db39ba6c872faadbdd57bd74d7e0e471c227
+---
+ media/libstagefright/omx/OMXNodeInstance.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/media/libstagefright/omx/OMXNodeInstance.cpp b/media/libstagefright/omx/OMXNodeInstance.cpp
+index f388a81..9ba1ce3 100644
+--- a/media/libstagefright/omx/OMXNodeInstance.cpp
++++ b/media/libstagefright/omx/OMXNodeInstance.cpp
+@@ -143,6 +143,9 @@ status_t OMXNodeInstance::freeNode(OMXMaster *master) {
+     OMX_STATETYPE state;
+     CHECK_EQ(OMX_GetState(mHandle, &state), OMX_ErrorNone);
+     switch (state) {
++        case OMX_StatePause:
++            LOGV("forcing Pause->Idle");
++            // fall through
+         case OMX_StateExecuting:
+         {
+             LOGV("forcing Executing->Idle");
+-- 
+1.8.2.1
+
