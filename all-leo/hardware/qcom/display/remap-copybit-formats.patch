@@ -1,0 +1,97 @@
+diff --git a/libcopybit/copybit.cpp b/libcopybit/copybit.cpp
+index 310225b..9daaa10 100644
+--- a/libcopybit/copybit.cpp
++++ b/libcopybit/copybit.cpp
+@@ -126,16 +126,17 @@ static int get_format(int format) {
+     case HAL_PIXEL_FORMAT_RGB_888:       return MDP_RGB_888;
+     case HAL_PIXEL_FORMAT_RGBA_8888:     return MDP_RGBA_8888;
+     case HAL_PIXEL_FORMAT_BGRA_8888:     return MDP_BGRA_8888;
+     case HAL_PIXEL_FORMAT_YCrCb_422_SP:  return MDP_Y_CBCR_H2V1;
+     case HAL_PIXEL_FORMAT_YCrCb_420_SP:  return MDP_Y_CBCR_H2V2;
+     case HAL_PIXEL_FORMAT_YCbCr_422_SP:  return MDP_Y_CRCB_H2V1;
+     case HAL_PIXEL_FORMAT_YCbCr_420_SP:  return MDP_Y_CRCB_H2V2;
+     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO: return MDP_Y_CBCR_H2V2_ADRENO;
++    case COPYBIT_FORMAT_XRGB_8888:       return MDP_XRGB_8888;
+     }
+     return -1;
+ }
+ 
+ /** convert from copybit image to mdp image structure */
+ static void set_image(struct mdp_img *img, const struct copybit_image_t *rhs) 
+ {
+     private_handle_t* hnd = (private_handle_t*)rhs->handle;
+diff --git a/libcopybit/copybit.h b/libcopybit/copybit.h
+index 72d1b28..6000c82 100644
+--- a/libcopybit/copybit.h
++++ b/libcopybit/copybit.h
+@@ -43,16 +43,17 @@ enum {
+     COPYBIT_FORMAT_RGBX_8888    = HAL_PIXEL_FORMAT_RGBX_8888,
+     COPYBIT_FORMAT_RGB_888      = HAL_PIXEL_FORMAT_RGB_888,
+     COPYBIT_FORMAT_RGB_565      = HAL_PIXEL_FORMAT_RGB_565,
+     COPYBIT_FORMAT_BGRA_8888    = HAL_PIXEL_FORMAT_BGRA_8888,
+     COPYBIT_FORMAT_RGBA_5551    = HAL_PIXEL_FORMAT_RGBA_5551,
+     COPYBIT_FORMAT_RGBA_4444    = HAL_PIXEL_FORMAT_RGBA_4444,
+     COPYBIT_FORMAT_YCbCr_422_SP = 0x10,
+     COPYBIT_FORMAT_YCrCb_420_SP = 0x11,
++    COPYBIT_FORMAT_XRGB_8888    = 0x40,
+ };
+ 
+ /* name for copybit_set_parameter */
+ enum {
+     /* rotation of the source image in degrees (0 to 359) */
+     COPYBIT_ROTATION_DEG    = 1,
+     /* plane alpha value */
+     COPYBIT_PLANE_ALPHA     = 2,
+diff --git a/libhwcomposer/a-family/hwcomposer.cpp b/libhwcomposer/a-family/hwcomposer.cpp
+index e1df62e..6719b53 100644
+--- a/libhwcomposer/a-family/hwcomposer.cpp
++++ b/libhwcomposer/a-family/hwcomposer.cpp
+@@ -1526,16 +1526,25 @@ static int drawLayerUsingCopybit(hwc_composer_device_t *dev, hwc_layer_t *layer,
+         return -1;
+     }
+ 
+     // Set the copybit source:
+     copybit_image_t src;
+     src.w = hnd->width;
+     src.h = hnd->height;
+     src.format = hnd->format;
++
++    if ((layer->flags & HWC_FORMAT_RB_SWAP)) {
++        if (src.format == HAL_PIXEL_FORMAT_RGBA_8888) {
++           src.format = HAL_PIXEL_FORMAT_BGRA_8888;
++        } else if (src.format == HAL_PIXEL_FORMAT_RGBX_8888) {
++          src.format = COPYBIT_FORMAT_XRGB_8888;
++        }
++    }
++
+     src.base = (void *)hnd->base;
+     src.handle = (native_handle_t *)layer->handle;
+     src.horiz_padding = src.w - hnd->width;
+     // Initialize vertical padding to zero for now,
+     // this needs to change to accomodate vertical stride
+     // if needed in the future
+     src.vert_padding = 0;
+ 
+diff --git a/libqcomui/qcom_ui.h b/libqcomui/qcom_ui.h
+index 681e90b..4601d82 100644
+--- a/libqcomui/qcom_ui.h
++++ b/libqcomui/qcom_ui.h
+@@ -91,16 +91,17 @@ enum {
+ 
+ /*
+  * Flags set by the layer and sent to HWC
+  */
+ enum {
+     HWC_LAYER_NOT_UPDATING      = 0x00000002,
+     HWC_LAYER_ASYNCHRONOUS      = 0x00000004,
+     HWC_COLOR_FILL              = 0x00000008, //RGBA color-fill using copybit
++    HWC_FORMAT_RB_SWAP          = 0x00000040, //Swap the RB pixels
+     HWC_USE_ORIGINAL_RESOLUTION = 0x10000000,
+     HWC_DO_NOT_USE_OVERLAY      = 0x20000000,
+     HWC_COMP_BYPASS             = 0x40000000,
+     HWC_USE_EXT_ONLY            = 0x80000000, //Layer displayed on external only
+     HWC_USE_EXT_BLOCK           = 0x01000000, //Layer displayed on external only
+     HWC_BYPASS_RESERVE_0        = 0x00000010,
+     HWC_BYPASS_RESERVE_1        = 0x00000020,
+ };
+
