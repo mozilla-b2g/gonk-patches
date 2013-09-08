@@ -1,0 +1,23 @@
+diff --git a/media/libstagefright/OMXCodec.cpp b/media/libstagefright/OMXCodec.cpp
+index 9d349a1..3377052 100644
+--- a/media/libstagefright/OMXCodec.cpp
++++ b/media/libstagefright/OMXCodec.cpp
+@@ -1844,17 +1844,17 @@ status_t OMXCodec::allocateOutputBuffersFromNativeWindow() {
+     OMX_U32 cancelEnd;
+     if (err != 0) {
+         // If an error occurred while dequeuing we need to cancel any buffers
+         // that were dequeued.
+         cancelStart = 0;
+         cancelEnd = mPortBuffers[kPortIndexOutput].size();
+     } else {
+         // Return the last two buffers to the native window.
+-        cancelStart = def.nBufferCountActual - minUndequeuedBufs;
++        cancelStart = def.nBufferCountActual;
+         cancelEnd = def.nBufferCountActual;
+     }
+ 
+     for (OMX_U32 i = cancelStart; i < cancelEnd; i++) {
+         BufferInfo *info = &mPortBuffers[kPortIndexOutput].editItemAt(i);
+         cancelBufferToNativeWindow(info);
+     }
+ 

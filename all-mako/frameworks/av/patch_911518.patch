@@ -1,0 +1,171 @@
+diff --git a/media/libstagefright/colorconversion/ColorConverter.cpp b/media/libstagefright/colorconversion/ColorConverter.cpp
+index 597167f..1284be8 100644
+--- a/media/libstagefright/colorconversion/ColorConverter.cpp
++++ b/media/libstagefright/colorconversion/ColorConverter.cpp
+@@ -1,10 +1,11 @@
+ /*
+  * Copyright (C) 2009 The Android Open Source Project
++ * Copyright (c) 2012, Code Aurora Forum. All rights reserved.
+  *
+  * Licensed under the Apache License, Version 2.0 (the "License");
+  * you may not use this file except in compliance with the License.
+  * You may obtain a copy of the License at
+  *
+  *      http://www.apache.org/licenses/LICENSE-2.0
+  *
+  * Unless required by applicable law or agreed to in writing, software
+@@ -16,19 +17,69 @@
+ 
+ //#define LOG_NDEBUG 0
+ #define LOG_TAG "ColorConverter"
+ #include <utils/Log.h>
+ 
+ #include <media/stagefright/foundation/ADebug.h>
+ #include <media/stagefright/ColorConverter.h>
+ #include <media/stagefright/MediaErrors.h>
++#include <dlfcn.h>
+ 
+ namespace android {
+ 
++enum {
++  OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar64x32Tile2m8ka = 0x7FA30C03
++};
++
++//------------------------------------------
++enum ColorConvertFormat {
++    RGB565 = 1,
++    YCbCr420Tile,
++    YCbCr420SP,
++    YCbCr420P,
++    YCrCb420P,
++};
++
++/* 64 bit flag variable, reserving bits as needed */
++enum ColorConvertFlags {
++    COLOR_CONVERT_ALIGN_NONE = 1,
++    COLOR_CONVERT_CENTER_OUTPUT = 1<<1,
++    COLOR_CONVERT_ALIGN_16 =   1<<4,
++    COLOR_CONVERT_ALIGN_2048 = 1<<11,
++    COLOR_CONVERT_ALIGN_8192 = 1<<13,
++};
++
++struct ColorConvertParams {
++    size_t width;
++    size_t height;
++
++    size_t cropWidth;
++    size_t cropHeight;
++
++    size_t cropLeft;
++    size_t cropRight;
++    size_t cropTop;
++    size_t cropBottom;
++
++    ColorConvertFormat colorFormat;
++    const void * data;
++    int fd;
++
++    uint64_t flags;
++};
++
++typedef int (* ConvertFn)(ColorConvertParams src,
++                          ColorConvertParams dst, uint8_t *adjustedClip);
++
++int convert(ColorConvertParams src, ColorConvertParams dst,
++            uint8_t *adjustedClip);
++
++//------------------------------------------
++
+ ColorConverter::ColorConverter(
+         OMX_COLOR_FORMATTYPE from, OMX_COLOR_FORMATTYPE to)
+     : mSrcFormat(from),
+       mDstFormat(to),
+       mClip(NULL) {
+ }
+ 
+ ColorConverter::~ColorConverter() {
+@@ -42,16 +93,17 @@ bool ColorConverter::isValid() const {
+     }
+ 
+     switch (mSrcFormat) {
+         case OMX_COLOR_FormatYUV420Planar:
+         case OMX_COLOR_FormatCbYCrY:
+         case OMX_QCOM_COLOR_FormatYVU420SemiPlanar:
+         case OMX_COLOR_FormatYUV420SemiPlanar:
+         case OMX_TI_COLOR_FormatYUV420PackedSemiPlanar:
++        case OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar64x32Tile2m8ka:
+             return true;
+ 
+         default:
+             return false;
+     }
+ }
+ 
+ ColorConverter::BitmapParams::BitmapParams(
+@@ -116,17 +168,65 @@ status_t ColorConverter::convert(
+ 
+         case OMX_COLOR_FormatYUV420SemiPlanar:
+             err = convertYUV420SemiPlanar(src, dst);
+             break;
+ 
+         case OMX_TI_COLOR_FormatYUV420PackedSemiPlanar:
+             err = convertTIYUV420PackedSemiPlanar(src, dst);
+             break;
+-
++        case OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar64x32Tile2m8ka:
++            {
++                void * lib = dlopen("libmm-color-convertor.so", RTLD_NOW);
++
++                if (!lib) {
++                    ALOGE("dlopen for libmm-color-convertor failed with errno %d", errno);
++                    return ERROR_UNSUPPORTED;
++                }
++
++                typedef int (*convertFn)(ColorConvertParams src, ColorConvertParams dst, uint8_t *adjustedClip);
++
++                convertFn convertNV12Tile = (convertFn)dlsym(lib, "_Z15convertNV12Tile18ColorConvertParamsS_Ph");
++                if (!convertNV12Tile) {
++                    dlclose(lib);
++                    ALOGE("dlsym on libmm-color-convertor failed with errno %d", errno);
++                    return ERROR_UNSUPPORTED;
++                }
++
++                struct ColorConvertParams srcTemp;
++                srcTemp.width = srcWidth;
++                srcTemp.height = srcHeight;
++                srcTemp.cropWidth = src.cropWidth();
++                srcTemp.cropHeight = src.cropHeight();
++                srcTemp.cropLeft = src.mCropLeft;
++                srcTemp.cropRight = src.mCropRight;
++                srcTemp.cropTop = src.mCropTop;
++                srcTemp.cropBottom = src.mCropBottom;
++                srcTemp.data = src.mBits;
++                srcTemp.colorFormat = YCbCr420Tile;
++                srcTemp.flags = 0;
++
++                struct ColorConvertParams dstTemp;
++                dstTemp.width = dstWidth;
++                dstTemp.height = dstHeight;
++                dstTemp.cropWidth = dst.cropWidth();
++                dstTemp.cropHeight = dst.cropHeight();
++                dstTemp.cropLeft = dst.mCropLeft;
++                dstTemp.cropRight = dst.mCropRight;
++                dstTemp.cropTop = dst.mCropTop;
++                dstTemp.cropBottom = dst.mCropBottom;
++                dstTemp.data = dst.mBits;
++                dstTemp.colorFormat = RGB565;
++                dstTemp.flags = 0;
++
++                uint8_t * adjustedClip = initClip();
++                err = convertNV12Tile(srcTemp, dstTemp, adjustedClip);
++                dlclose(lib);
++            }
++            break;
+         default:
+         {
+             CHECK(!"Should not be here. Unknown color conversion.");
+             break;
+         }
+     }
+ 
+     return err;
