@@ -1,0 +1,28 @@
+From 724551849fac2e2a426be688752d0c700abc0d10 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Hubert=20Figui=C3=A8re?= <hub@figuiere.net>
+Date: Mon, 9 Sep 2013 14:55:30 +0200
+Subject: [PATCH] Fix build for gcc 4.7 and later.
+
+---
+ include/utils/KeyedVector.h | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/include/utils/KeyedVector.h b/include/utils/KeyedVector.h
+index 3419d81..5e62755 100644
+--- a/include/utils/KeyedVector.h
++++ b/include/utils/KeyedVector.h
+@@ -190,11 +190,7 @@ DefaultKeyedVector<KEY,VALUE>::DefaultKeyedVector(const VALUE& defValue)
+ 
+ template<typename KEY, typename VALUE> inline
+ const VALUE& DefaultKeyedVector<KEY,VALUE>::valueFor(const KEY& key) const {
+-#ifdef __clang__
+     ssize_t i = this->indexOfKey(key);
+-#else
+-    ssize_t i = indexOfKey(key);
+-#endif
+     return i >= 0 ? KeyedVector<KEY,VALUE>::valueAt(i) : mDefault;
+ }
+ 
+-- 
+1.8.3.1
+
