@@ -55,6 +55,53 @@ __tree_md5sum()
    ) | openssl dgst -md5
 }
 
+__is_case_insensitive()
+{
+   F1='.validate_case_sensitive'
+   F2='.VALIDATE_CASE_SENSITIVE'
+   echo 'foo' > $F1
+   echo 'bar' > $F2
+   diff -q $F1 $F2 >/dev/null 2>&1
+   RTN=$?
+   rm -f $F1 $F2
+   return $RTN
+}
+
+#
+# Hack to work around following issue (bug 867259):
+#   On case insensitive file systems, like Mac OS's HFS+, some files within
+#   the linux kernel will appear to be modified in git.  This is due multiple
+#   files having the same name exept for case differences.  This in turn
+#   causes the patch process to error out due to "existing changes".  On
+#   platforms without kernel patches, however, the build works fine in spite
+#   of the file issues.  Therefore, workaround the problem by forcing the
+#   known problem files to be the same in both content and name.
+#
+__kernel_case_insensitive_hack()
+{
+   if __is_case_insensitive ; then
+      echo "  *** WARNING: case insensitive file system"
+      if [[ -d .git ]]; then
+         KERN_IGNORES="include/linux/netfilter/xt_CONNMARK.h"
+         KERN_IGNORES="${KERN_IGNORES} include/linux/netfilter/xt_DSCP.h"
+         KERN_IGNORES="${KERN_IGNORES} include/linux/netfilter/xt_MARK.h"
+         KERN_IGNORES="${KERN_IGNORES} include/linux/netfilter/xt_RATEEST.h"
+         KERN_IGNORES="${KERN_IGNORES} include/linux/netfilter/xt_TCPMSS.h"
+         KERN_IGNORES="${KERN_IGNORES} include/linux/netfilter_ipv4/ipt_ECN.h"
+         KERN_IGNORES="${KERN_IGNORES} include/linux/netfilter_ipv4/ipt_TTL.h"
+         KERN_IGNORES="${KERN_IGNORES} include/linux/netfilter_ipv6/ip6t_HL.h"
+         KERN_IGNORES="${KERN_IGNORES} net/ipv4/netfilter/ipt_ECN.c"
+         KERN_IGNORES="${KERN_IGNORES} net/netfilter/xt_DSCP.c"
+         KERN_IGNORES="${KERN_IGNORES} net/netfilter/xt_HL.c"
+         KERN_IGNORES="${KERN_IGNORES} net/netfilter/xt_RATEEST.c"
+         KERN_IGNORES="${KERN_IGNORES} net/netfilter/xt_TCPMSS.c"
+
+         git add ${KERN_IGNORES}
+         git commit -m "B2G hack for case insensitive FS." -q ${KERN_IGNORES}
+      fi
+   fi
+}
+
 __abandon_tree()
 {
    rm -f out/lastpatch.md5sum
@@ -171,6 +218,10 @@ __patch_tree()
             (
                set -e
                if branch ${PRJ} ; then
+                  if [[ "$PRJ" == "kernel" ]]; then
+                     __kernel_case_insensitive_hack
+                  fi
+
                   if [[ $1 != "force" && $(whoami) != "lnxbuild" ]]; then
                      if [[ -n $(git status --porcelain) ]]; then
                         echo "ERROR: You have uncommited changes in ${PRJ}"
